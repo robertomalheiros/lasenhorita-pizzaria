@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: lasenhorita-db
+    environment:
+      POSTGRES_USER: lasenhorita
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-LaSenhorita2025!}
+      POSTGRES_DB: lasenhorita
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/seeds/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5433:5432"
+    networks:
+      - lasenhorita-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lasenhorita -d lasenhorita"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: lasenhorita-backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: lasenhorita
+      DB_PASSWORD: ${DB_PASSWORD:-LaSenhorita2025!}
+      DB_NAME: lasenhorita
+      JWT_SECRET: ${JWT_SECRET:-jwt-secret-lasenhorita-2025-mudar-em-producao}
+      JWT_EXPIRES_IN: 24h
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lasenhorita-network
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: ./frontend
+    container_name: lasenhorita-frontend
+    environment:
+      REACT_APP_API_URL: ${API_URL:-http://localhost:3001/api}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - lasenhorita-network
+    restart: unless-stopped
+
+  chatbot:
+    build: ./chatbot
+    container_name: lasenhorita-chatbot
+    environment:
+      API_URL: http://backend:3001/api/chatbot
+      SESSION_NAME: lasenhorita
+      HEADLESS: "true"
+    volumes:
+      - chatbot_tokens:/app/tokens
+    depends_on:
+      - backend
+    networks:
+      - lasenhorita-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: lasenhorita_postgres_data
+  chatbot_tokens:
+    name: lasenhorita_chatbot_tokens
+
+networks:
+  lasenhorita-network:
+    name: lasenhorita-network
+    driver: bridge
