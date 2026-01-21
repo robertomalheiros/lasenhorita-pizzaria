@@ -1,6 +1,28 @@
 const { Pedido, ItemPedido, Cliente, Usuario, Motoboy, Produto, TamanhoPizza, Borda, TaxaEntrega, sequelize } = require('../models');
 const { logAction } = require('../middlewares/logger.middleware');
 const { Op } = require('sequelize');
+const axios = require('axios');
+
+// URL do chatbot para envio de notificações
+const CHATBOT_URL = process.env.CHATBOT_URL || 'http://chatbot:3100';
+
+// Função para enviar notificação WhatsApp
+const enviarNotificacaoWhatsApp = async (telefone, mensagem) => {
+  try {
+    const response = await axios.post(`${CHATBOT_URL}/notify`, {
+      telefone,
+      mensagem
+    }, {
+      timeout: 10000 // 10 segundos de timeout
+    });
+    console.log(`📤 Notificação WhatsApp enviada para ${telefone}`);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Erro ao enviar notificação WhatsApp para ${telefone}:`, error.message);
+    // Não lançar erro para não afetar a atualização do status
+    return null;
+  }
+};
 
 // Gerar número do pedido
 const gerarNumeroPedido = async () => {
@@ -355,7 +377,9 @@ const pedidosController = {
         return res.status(400).json({ error: 'Status inválido' });
       }
 
-      const pedido = await Pedido.findByPk(id);
+      const pedido = await Pedido.findByPk(id, {
+        include: [{ model: Cliente, as: 'cliente' }]
+      });
       if (!pedido) {
         return res.status(404).json({ error: 'Pedido não encontrado' });
       }
@@ -378,6 +402,75 @@ const pedidosController = {
       await pedido.update(atualizacao);
 
       await logAction(req, 'ATUALIZAR_STATUS', 'pedidos', id, { status: statusAnterior }, { status });
+
+      // Enviar notificação WhatsApp quando status mudar de "pendente"
+      if (statusAnterior === 'pendente' && status !== 'pendente' && pedido.cliente?.telefone) {
+        const formatarDinheiro = (valor) => {
+          return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        };
+
+        let mensagemStatus = '';
+
+        if (status === 'confirmado') {
+          mensagemStatus = `✅ *PEDIDO CONFIRMADO!*
+
+🎉 Olá! Seu pedido #${pedido.numero_pedido} foi confirmado!
+
+💰 *Total:* ${formatarDinheiro(pedido.total)}
+
+🍕 Estamos preparando sua delícia com muito carinho!
+
+Você receberá atualizações do status do seu pedido.
+
+Obrigado por escolher a *LaSenhorita Pizzaria*! 🇮🇹`;
+        } else if (status === 'preparando') {
+          mensagemStatus = `👨‍🍳 *PEDIDO EM PREPARO!*
+
+Seu pedido #${pedido.numero_pedido} está sendo preparado!
+
+🍕 Nossa equipe está trabalhando na sua pizza.
+
+Obrigado pela preferência! 🇮🇹`;
+        } else if (status === 'pronto') {
+          mensagemStatus = `🔔 *PEDIDO PRONTO!*
+
+Seu pedido #${pedido.numero_pedido} está pronto!
+
+${pedido.tipo_pedido === 'delivery' ? '🛵 Em breve sairá para entrega!' : '🏪 Pode retirar no balcão!'}
+
+Obrigado pela preferência! 🇮🇹`;
+        } else if (status === 'saiu_entrega') {
+          mensagemStatus = `🛵 *SAIU PARA ENTREGA!*
+
+Seu pedido #${pedido.numero_pedido} saiu para entrega!
+
+📍 Aguarde em breve no endereço cadastrado.
+
+Obrigado pela preferência! 🇮🇹`;
+        } else if (status === 'entregue') {
+          mensagemStatus = `🎊 *PEDIDO ENTREGUE!*
+
+Seu pedido #${pedido.numero_pedido} foi entregue!
+
+Esperamos que aproveite! 😋
+
+Obrigado por escolher a *LaSenhorita Pizzaria*! 🇮🇹
+Volte sempre! ❤️`;
+        } else if (status === 'cancelado') {
+          mensagemStatus = `❌ *PEDIDO CANCELADO*
+
+Infelizmente seu pedido #${pedido.numero_pedido} foi cancelado.
+
+Em caso de dúvidas, entre em contato conosco.
+
+*LaSenhorita Pizzaria* 🇮🇹`;
+        }
+
+        if (mensagemStatus) {
+          // Enviar notificação de forma assíncrona (não bloquear a resposta)
+          enviarNotificacaoWhatsApp(pedido.cliente.telefone, mensagemStatus);
+        }
+      }
 
       return res.json(pedido);
     } catch (error) {

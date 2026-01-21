@@ -91,8 +91,8 @@ export default function NovoPedidoPage() {
 
   const abrirModalProduto = (produto) => {
     setProdutoSelecionado(produto);
-    setTamanhoSelecionado(produto.is_pizza ? tamanhos[0] : null);
-    setBordaSelecionada(produto.is_pizza ? bordas[0] : null);
+    setTamanhoSelecionado(null); // Não pré-selecionar tamanho
+    setBordaSelecionada(produto.is_pizza && bordas.length > 0 ? bordas[0] : null); // Borda tradicional como padrão
     setQuantidade(1);
     setModalAberto(true);
   };
@@ -428,7 +428,7 @@ export default function NovoPedidoPage() {
             <div className="flex justify-between items-center mb-6">
               <span className="text-gray-600">Preço unitário:</span>
               <span className="text-xl font-bold text-red-600">
-                R$ {(getPreco() + (bordaSelecionada?.preco || 0)).toFixed(2)}
+                R$ {(getPreco() + (bordaSelecionada ? parseFloat(bordaSelecionada.preco) : 0)).toFixed(2)}
               </span>
             </div>
 
@@ -441,9 +441,10 @@ export default function NovoPedidoPage() {
               </button>
               <button
                 onClick={adicionarItem}
-                className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                disabled={produtoSelecionado?.is_pizza && !tamanhoSelecionado}
+                className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Adicionar
+                {produtoSelecionado?.is_pizza && !tamanhoSelecionado ? 'Selecione o tamanho' : 'Adicionar'}
               </button>
             </div>
           </div>

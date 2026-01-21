@@ -167,6 +167,31 @@ router.get('/taxas/bairro/:bairro', async (req, res) => {
   }
 });
 
+// Função para gerar número do pedido
+async function gerarNumeroPedido() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear().toString().slice(-2);
+  const mes = (hoje.getMonth() + 1).toString().padStart(2, '0');
+  const dia = hoje.getDate().toString().padStart(2, '0');
+  const prefixo = `${ano}${mes}${dia}`;
+
+  // Buscar último pedido do dia
+  const ultimoPedido = await Pedido.findOne({
+    where: {
+      numero_pedido: { [Op.like]: `${prefixo}%` }
+    },
+    order: [['numero_pedido', 'DESC']]
+  });
+
+  let sequencia = 1;
+  if (ultimoPedido) {
+    const ultimaSequencia = parseInt(ultimoPedido.numero_pedido.slice(-4));
+    sequencia = ultimaSequencia + 1;
+  }
+
+  return `${prefixo}${sequencia.toString().padStart(4, '0')}`;
+}
+
 // POST /api/chatbot/pedidos
 router.post('/pedidos', async (req, res) => {
   try {
@@ -187,29 +212,37 @@ router.post('/pedidos', async (req, res) => {
       return res.status(400).json({ error: 'Dados incompletos' });
     }
 
+    // Gerar número do pedido
+    const numero_pedido = await gerarNumeroPedido();
+
+    // Mapear tipo_entrega para tipo_pedido do modelo
+    const tipo_pedido = tipo_entrega === 'entrega' ? 'delivery' : 'balcao';
+
     // Criar pedido
     const pedido = await Pedido.create({
+      numero_pedido,
       cliente_id,
-      tipo_entrega,
+      tipo_pedido,
       forma_pagamento,
       troco_para,
       endereco_entrega,
       subtotal,
       taxa_entrega: taxa_entrega || 0,
       total,
-      status: 'pendente',
-      origem: 'whatsapp'
+      status: 'pendente'
     });
 
     // Criar itens do pedido
     for (const item of itens) {
+      const itemSubtotal = parseFloat(item.preco_unitario) * (item.quantidade || 1);
       await ItemPedido.create({
         pedido_id: pedido.id,
         produto_id: item.produto_id,
         tamanho_id: item.tamanho_id || null,
         borda_id: item.borda_id || null,
-        quantidade: item.quantidade,
+        quantidade: item.quantidade || 1,
         preco_unitario: item.preco_unitario,
+        subtotal: itemSubtotal,
         observacao: item.observacao || null
       });
     }

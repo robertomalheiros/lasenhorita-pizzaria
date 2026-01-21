@@ -35,6 +35,7 @@ services:
       DB_NAME: lasenhorita
       JWT_SECRET: ${JWT_SECRET:-jwt-secret-lasenhorita-2025-mudar-em-producao}
       JWT_EXPIRES_IN: 24h
+      CHATBOT_URL: http://chatbot:3100
     ports:
       - "3001:3001"
     depends_on:
@@ -67,6 +68,7 @@ services:
       API_URL: http://backend:3001/api/chatbot
       SESSION_NAME: lasenhorita
       HEADLESS: "true"
+      NOTIFICATION_PORT: 3100
     volumes:
       - chatbot_tokens:/app/tokens
     depends_on:

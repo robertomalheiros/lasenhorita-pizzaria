@@ -3,6 +3,13 @@ const { formatarDinheiro, formatarNumeroPedido } = require('../utils/formatters'
 
 // Processar escolha de categoria
 async function processarCategoria(sessao, opcao) {
+  // Voltar ao menu principal
+  if (opcao === '0') {
+    const menuHandler = require('./menuHandler');
+    sessao.estado = 'MENU_PRINCIPAL';
+    return menuHandler.menuPrincipal();
+  }
+
   const categorias = sessao.dados.categorias;
   const index = parseInt(opcao) - 1;
 
@@ -89,7 +96,8 @@ async function mostrarSabores(sessao) {
       menu += `*${index + 1}* - ${pizza.nome} - ${valorPreco}\n`;
     });
 
-    menu += `\n*0* - Voltar`;
+    menu += `\n📋 _Os ingredientes de cada sabor estão no catálogo do perfil da pizzaria._`;
+    menu += `\n\n*0* - Voltar aos tamanhos`;
 
     return menu;
   } catch (error) {
@@ -551,11 +559,12 @@ async function mostrarResumoPedido(sessao) {
   }
 
   if (sessao.dados.formaPagamento === 'pix') {
-    resumo += `\n\n📱 *Chave PIX:* (XX) XXXXX-XXXX`;
+    resumo += `\n\n📱 *Chave PIX:* 77988197145 (Rogério S. O.)`;
+    resumo += `\n\n⚠️ _Após enviar o pedido, envie o comprovante de pagamento aqui._`;
   }
 
   resumo += `\n\n━━━━━━━━━━━━━━━━━━`;
-  resumo += `\n*1* - ✅ Confirmar Pedido`;
+  resumo += `\n*1* - ✅ Enviar Pedido`;
   resumo += `\n*2* - ❌ Cancelar`;
 
   return resumo;
@@ -596,20 +605,26 @@ Digite *1* para fazer um novo pedido ou *0* para menu principal.`;
     }
   });
 
+  // Salvar dados antes de limpar
+  const tipoEntrega = sessao.dados.tipoEntrega;
+  const formaPagamento = sessao.dados.formaPagamento;
+  const total = sessao.dados.total;
+
   // Criar pedido na API
   try {
     const pedido = await apiService.criarPedido({
       cliente_id: sessao.cliente.id,
-      tipo_entrega: sessao.dados.tipoEntrega,
-      forma_pagamento: sessao.dados.formaPagamento,
+      tipo_entrega: tipoEntrega,
+      forma_pagamento: formaPagamento,
       troco_para: sessao.dados.troco || null,
-      endereco_entrega: sessao.dados.tipoEntrega === 'entrega'
+      endereco_entrega: tipoEntrega === 'entrega'
         ? `${sessao.cliente.endereco}, ${sessao.cliente.bairro}`
         : null,
       subtotal: sessao.dados.subtotal,
       taxa_entrega: sessao.dados.taxaEntrega,
-      total: sessao.dados.total,
-      itens: itens
+      total: total,
+      itens: itens,
+      telefone: telefone
     });
 
     // Limpar carrinho e dados
@@ -617,12 +632,31 @@ Digite *1* para fazer um novo pedido ou *0* para menu principal.`;
     sessao.dados = {};
     sessao.estado = 'MENU_PRINCIPAL';
 
-    return `✅ *Pedido Confirmado!*
+    // Mensagem diferente para PIX
+    if (formaPagamento === 'pix') {
+      return `📤 *Pedido Enviado!*
 
 🎉 Seu pedido ${formatarNumeroPedido(pedido.id)} foi recebido!
 
-⏱️ *Tempo estimado:*
-${sessao.dados?.tipoEntrega === 'entrega' ? '40-60 minutos' : '25-35 minutos'}
+💰 *Total:* ${formatarDinheiro(total)}
+
+📱 *Chave PIX:* 77988197145 (Rogério S. O.)
+
+⚠️ *IMPORTANTE:* Envie o comprovante de pagamento aqui para confirmarmos seu pedido.
+
+Aguardamos a confirmação do pagamento para iniciar o preparo.
+
+Digite *0* para voltar ao menu principal.`;
+    }
+
+    // Mensagem para outros pagamentos
+    return `📤 *Pedido Enviado!*
+
+🎉 Seu pedido ${formatarNumeroPedido(pedido.id)} foi recebido!
+
+💰 *Total:* ${formatarDinheiro(total)}
+
+⏳ Aguarde a confirmação do seu pedido. Você receberá uma mensagem assim que for confirmado.
 
 Acompanhe seu pedido digitando *2* no menu principal.
 
@@ -638,6 +672,33 @@ Digite *1* para tentar novamente ou *0* para menu principal.`;
   }
 }
 
+// Processar remoção de item do carrinho
+async function processarRemoverItem(sessao, opcao) {
+  if (opcao === '0') {
+    return await mostrarCarrinho(sessao);
+  }
+
+  const index = parseInt(opcao) - 1;
+
+  if (isNaN(index) || index < 0 || index >= sessao.carrinho.length) {
+    return '❌ Opção inválida. Digite o número do item que deseja remover.';
+  }
+
+  const itemRemovido = sessao.carrinho[index];
+  sessao.carrinho.splice(index, 1);
+
+  if (sessao.carrinho.length === 0) {
+    sessao.estado = 'MENU_PRINCIPAL';
+    return `🗑️ *${itemRemovido.nome}* removido!
+
+🛒 Seu carrinho está vazio agora.
+
+Digite *1* para fazer um novo pedido.`;
+  }
+
+  return `🗑️ *${itemRemovido.nome}* removido!\n\n` + await mostrarCarrinho(sessao);
+}
+
 module.exports = {
   processarCategoria,
   processarTamanho,
@@ -647,6 +708,7 @@ module.exports = {
   processarProduto,
   processarConfirmacaoItem,
   processarCarrinho,
+  processarRemoverItem,
   processarTipoEntrega,
   processarFormaPagamento,
   processarTrocoValor,
