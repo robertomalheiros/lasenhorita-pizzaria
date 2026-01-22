@@ -191,14 +191,23 @@ async function mostrarCategorias(sessao) {
 Escolha uma categoria:\n\n`;
 
     categorias.forEach((cat, index) => {
-      const emojis = {
-        'Pizzas': '🍕',
-        'Bebidas': '🥤',
-        'Porções': '🍟',
-        'Sobremesas': '🍰'
-      };
-      const emoji = emojis[cat.nome] || '📦';
-      menu += `*${index + 1}* - ${emoji} ${cat.nome}\n`;
+      // Emojis e sufixos por categoria
+      let emoji = '📦';
+      let sufixo = '';
+
+      if (cat.nome.toLowerCase().includes('pizza')) {
+        emoji = '🍕';
+      } else if (cat.nome.toLowerCase().includes('bebida')) {
+        emoji = '🥤';
+      } else if (cat.nome.toLowerCase().includes('porç')) {
+        emoji = '🍟';
+        sufixo = ' (Em breve)';
+      } else if (cat.nome.toLowerCase().includes('sobremesa')) {
+        emoji = '🍰';
+        sufixo = ' (Em breve)';
+      }
+
+      menu += `*${index + 1}* - ${emoji} ${cat.nome}${sufixo}\n`;
     });
 
     menu += `\n*0* - Voltar ao menu principal`;

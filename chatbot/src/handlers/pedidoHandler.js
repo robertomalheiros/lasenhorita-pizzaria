@@ -129,7 +129,7 @@ async function mostrarSabores(sessao) {
     let menu = `🍕 *Sabores de Pizza* (${tamanho.nome})\n`;
     menu += `Escolhendo sabor ${saboresEscolhidos + 1} de ${qtdSabores}\n\n`;
 
-    // Agrupar pizzas por categoria/tipo
+    // Listar pizzas com ingredientes
     pizzas.forEach((pizza, index) => {
       // Identificar se é premium (camarão, carne do sol, filé)
       const nomeLower = pizza.nome.toLowerCase();
@@ -137,11 +137,13 @@ async function mostrarSabores(sessao) {
                         nomeLower.includes('carne do sol') ||
                         nomeLower.includes('filé');
       const indicador = isPremium ? '🔴' : '🟢';
-      menu += `*${index + 1}* - ${indicador} ${pizza.nome}\n`;
+
+      // Formatar ingredientes (descrição) entre parênteses
+      const ingredientes = pizza.descricao ? ` (${pizza.descricao})` : '';
+      menu += `*${index + 1}* - ${indicador} ${pizza.nome}${ingredientes}\n`;
     });
 
     menu += `\n🟢 Tradicionais/Especiais | 🔴 Premium (+R$15)`;
-    menu += `\n\n📋 _Os ingredientes estão no catálogo do perfil._`;
     menu += `\n\n*0* - Voltar`;
 
     return menu;
