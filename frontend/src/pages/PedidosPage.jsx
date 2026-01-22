@@ -26,6 +26,7 @@ const statusOptions = [
   { value: 'preparando', label: 'Preparando' },
   { value: 'pronto', label: 'Pronto' },
   { value: 'saiu_entrega', label: 'Saiu p/ Entrega' },
+  { value: 'em_transito', label: 'Em Trânsito' },
   { value: 'entregue', label: 'Entregue' },
   { value: 'cancelado', label: 'Cancelado' }
 ];
@@ -68,10 +69,17 @@ const statusConfig = {
   },
   saiu_entrega: {
     label: 'Saiu p/ Entrega',
-    proximo: 'entregue',
-    labelProximo: 'Entregue',
+    proximo: 'em_transito',
+    labelProximo: 'Em Trânsito',
     badgeClass: 'bg-purple-100 text-purple-800',
     btnClass: 'bg-purple-500 hover:bg-purple-600 text-white'
+  },
+  em_transito: {
+    label: 'Em Trânsito',
+    proximo: 'entregue',
+    labelProximo: 'Entregue',
+    badgeClass: 'bg-indigo-100 text-indigo-800',
+    btnClass: 'bg-indigo-500 hover:bg-indigo-600 text-white'
   },
   entregue: {
     label: 'Entregue',

@@ -153,7 +153,11 @@ async function processarSegundoSabor(sessao, opcao) {
 // Mostrar bordas disponíveis
 async function mostrarBordas(sessao) {
   try {
-    const bordas = await apiService.listarBordas();
+    const todasBordas = await apiService.listarBordas();
+    // Filtrar bordas recheadas (excluir "Sem Borda" ou preço 0)
+    const bordas = todasBordas.filter(b =>
+      parseFloat(b.preco) > 0 && !b.nome.toLowerCase().includes('sem borda')
+    );
     sessao.dados.bordas = bordas;
     sessao.estado = 'ESCOLHER_BORDA';
 

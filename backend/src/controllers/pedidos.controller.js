@@ -110,7 +110,7 @@ const pedidosController = {
     try {
       const pedidos = await Pedido.findAll({
         where: {
-          status: { [Op.in]: ['pendente', 'confirmado', 'preparando', 'pronto'] }
+          status: { [Op.in]: ['pendente', 'confirmado', 'preparando', 'pronto', 'saiu_entrega', 'em_transito'] }
         },
         include: [
           { model: Cliente, as: 'cliente', attributes: ['id', 'nome', 'telefone'] },
@@ -133,7 +133,9 @@ const pedidosController = {
         pendente: pedidos.filter(p => p.status === 'pendente'),
         confirmado: pedidos.filter(p => p.status === 'confirmado'),
         preparando: pedidos.filter(p => p.status === 'preparando'),
-        pronto: pedidos.filter(p => p.status === 'pronto')
+        pronto: pedidos.filter(p => p.status === 'pronto'),
+        saiu_entrega: pedidos.filter(p => p.status === 'saiu_entrega'),
+        em_transito: pedidos.filter(p => p.status === 'em_transito')
       };
 
       return res.json(fila);
@@ -371,7 +373,7 @@ const pedidosController = {
       const { id } = req.params;
       const { status } = req.body;
 
-      const statusValidos = ['pendente', 'confirmado', 'preparando', 'pronto', 'saiu_entrega', 'entregue', 'cancelado'];
+      const statusValidos = ['pendente', 'confirmado', 'preparando', 'pronto', 'saiu_entrega', 'em_transito', 'entregue', 'cancelado'];
 
       if (!statusValidos.includes(status)) {
         return res.status(400).json({ error: 'Status inválido' });
@@ -403,8 +405,8 @@ const pedidosController = {
 
       await logAction(req, 'ATUALIZAR_STATUS', 'pedidos', id, { status: statusAnterior }, { status });
 
-      // Enviar notificação WhatsApp quando status mudar de "pendente"
-      if (statusAnterior === 'pendente' && status !== 'pendente' && pedido.cliente?.telefone) {
+      // Enviar notificação WhatsApp para TODAS as mudanças de status
+      if (statusAnterior !== status && pedido.cliente?.telefone) {
         const formatarDinheiro = (valor) => {
           return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
         };
@@ -444,7 +446,17 @@ Obrigado pela preferência! 🇮🇹`;
 
 Seu pedido #${pedido.numero_pedido} saiu para entrega!
 
-📍 Aguarde em breve no endereço cadastrado.
+📍 Aguarde, nosso motoboy está a caminho!
+
+Obrigado pela preferência! 🇮🇹`;
+        } else if (status === 'em_transito') {
+          mensagemStatus = `🏍️ *PEDIDO EM TRÂNSITO!*
+
+Seu pedido #${pedido.numero_pedido} está a caminho!
+
+📍 Nosso motoboy está chegando no seu endereço.
+
+Prepare-se para receber sua pizza quentinha! 🍕
 
 Obrigado pela preferência! 🇮🇹`;
         } else if (status === 'entregue') {

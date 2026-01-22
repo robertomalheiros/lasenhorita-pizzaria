@@ -107,7 +107,7 @@ router.get('/tamanhos', async (req, res) => {
   try {
     const tamanhos = await TamanhoPizza.findAll({
       where: { ativo: true },
-      order: [['ordem', 'ASC']]
+      order: [['id', 'ASC']]
     });
     return res.json(tamanhos);
   } catch (error) {
