@@ -45,17 +45,74 @@ function Temporizador({ dataInicio }) {
 function CardPedido({ pedido, onAtualizarStatus }) {
   const [loading, setLoading] = useState(false);
 
+  // Mapeamento completo de classes para evitar purge do Tailwind
   const statusConfig = {
-    pendente: { label: 'Pendente', cor: 'yellow', proximo: 'confirmado', labelProximo: 'Confirmar' },
-    confirmado: { label: 'Confirmado', cor: 'blue', proximo: 'preparando', labelProximo: 'Preparar' },
-    preparando: { label: 'Preparando', cor: 'orange', proximo: 'pronto', labelProximo: 'Pronto!' },
-    pronto: { label: 'Pronto', cor: 'green', proximo: 'saiu_entrega', labelProximo: 'Saiu Entrega' },
-    saiu_entrega: { label: 'Saiu Entrega', cor: 'indigo', proximo: 'em_transito', labelProximo: 'Em Trânsito' },
-    em_transito: { label: 'Em Trânsito', cor: 'purple', proximo: 'entregue', labelProximo: 'Entregue' },
-    entregue: { label: 'Entregue', cor: 'emerald', proximo: null, labelProximo: null }
+    pendente: {
+      label: 'Pendente',
+      proximo: 'confirmado',
+      labelProximo: 'Confirmar',
+      borderClass: 'border-yellow-300',
+      badgeBg: 'bg-yellow-100',
+      badgeText: 'text-yellow-800',
+      btnBg: 'bg-yellow-500 hover:bg-yellow-600'
+    },
+    confirmado: {
+      label: 'Confirmado',
+      proximo: 'preparando',
+      labelProximo: 'Preparar',
+      borderClass: 'border-blue-300',
+      badgeBg: 'bg-blue-100',
+      badgeText: 'text-blue-800',
+      btnBg: 'bg-blue-500 hover:bg-blue-600'
+    },
+    preparando: {
+      label: 'Preparando',
+      proximo: 'pronto',
+      labelProximo: 'Pronto!',
+      borderClass: 'border-orange-300',
+      badgeBg: 'bg-orange-100',
+      badgeText: 'text-orange-800',
+      btnBg: 'bg-orange-500 hover:bg-orange-600'
+    },
+    pronto: {
+      label: 'Pronto',
+      proximo: 'saiu_entrega',
+      labelProximo: 'Saiu Entrega',
+      borderClass: 'border-green-300',
+      badgeBg: 'bg-green-100',
+      badgeText: 'text-green-800',
+      btnBg: 'bg-green-500 hover:bg-green-600'
+    },
+    saiu_entrega: {
+      label: 'Saiu Entrega',
+      proximo: 'em_transito',
+      labelProximo: 'Em Trânsito',
+      borderClass: 'border-indigo-300',
+      badgeBg: 'bg-indigo-100',
+      badgeText: 'text-indigo-800',
+      btnBg: 'bg-indigo-500 hover:bg-indigo-600'
+    },
+    em_transito: {
+      label: 'Em Trânsito',
+      proximo: 'entregue',
+      labelProximo: 'Entregue',
+      borderClass: 'border-purple-300',
+      badgeBg: 'bg-purple-100',
+      badgeText: 'text-purple-800',
+      btnBg: 'bg-purple-500 hover:bg-purple-600'
+    },
+    entregue: {
+      label: 'Entregue',
+      proximo: null,
+      labelProximo: null,
+      borderClass: 'border-emerald-300',
+      badgeBg: 'bg-emerald-100',
+      badgeText: 'text-emerald-800',
+      btnBg: 'bg-emerald-500 hover:bg-emerald-600'
+    }
   };
 
-  const config = statusConfig[pedido.status];
+  const config = statusConfig[pedido.status] || statusConfig.pendente;
 
   const handleAvancarStatus = async () => {
     if (!config.proximo) return;
@@ -76,11 +133,11 @@ function CardPedido({ pedido, onAtualizarStatus }) {
   const isUrgente = minutos > 30;
 
   return (
-    <div className={`pedido-card ${isUrgente ? 'urgente' : ''} border-${config.cor}-300`}>
+    <div className={`pedido-card ${isUrgente ? 'urgente' : ''} ${config.borderClass}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-lg font-bold text-gray-900">#{pedido.numero_pedido}</span>
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full bg-${config.cor}-100 text-${config.cor}-800`}>
+        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${config.badgeBg} ${config.badgeText}`}>
           {pedido.tipo_pedido.toUpperCase()}
         </span>
       </div>
@@ -133,7 +190,7 @@ function CardPedido({ pedido, onAtualizarStatus }) {
           <button
             onClick={handleAvancarStatus}
             disabled={loading}
-            className={`flex-1 flex items-center justify-center px-3 py-2 bg-${config.cor}-500 text-white rounded-lg hover:bg-${config.cor}-600 transition-colors disabled:opacity-50`}
+            className={`flex-1 flex items-center justify-center px-3 py-2 ${config.btnBg} text-white rounded-lg transition-colors disabled:opacity-50`}
           >
             {loading ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -151,12 +208,12 @@ function CardPedido({ pedido, onAtualizarStatus }) {
 }
 
 // Componente Coluna de Fila
-function ColunaFila({ titulo, pedidos, cor, onAtualizarStatus }) {
+function ColunaFila({ titulo, pedidos, borderClass, textClass, badgeClass, onAtualizarStatus }) {
   return (
     <div className="flex-1 min-w-[280px]">
-      <div className={`flex items-center justify-between mb-4 pb-2 border-b-2 border-${cor}-500`}>
-        <h3 className={`font-semibold text-${cor}-700`}>{titulo}</h3>
-        <span className={`px-2 py-1 text-sm font-bold rounded-full bg-${cor}-100 text-${cor}-700`}>
+      <div className={`flex items-center justify-between mb-4 pb-2 border-b-2 ${borderClass}`}>
+        <h3 className={`font-semibold ${textClass}`}>{titulo}</h3>
+        <span className={`px-2 py-1 text-sm font-bold rounded-full ${badgeClass}`}>
           {pedidos.length}
         </span>
       </div>
@@ -293,43 +350,57 @@ export default function DashboardPage() {
           <ColunaFila
             titulo="🟡 Pendentes"
             pedidos={fila.pendente}
-            cor="yellow"
+            borderClass="border-yellow-500"
+            textClass="text-yellow-700"
+            badgeClass="bg-yellow-100 text-yellow-700"
             onAtualizarStatus={carregarDados}
           />
           <ColunaFila
             titulo="🔵 Confirmados"
             pedidos={fila.confirmado}
-            cor="blue"
+            borderClass="border-blue-500"
+            textClass="text-blue-700"
+            badgeClass="bg-blue-100 text-blue-700"
             onAtualizarStatus={carregarDados}
           />
           <ColunaFila
             titulo="🟠 Preparando"
             pedidos={fila.preparando}
-            cor="orange"
+            borderClass="border-orange-500"
+            textClass="text-orange-700"
+            badgeClass="bg-orange-100 text-orange-700"
             onAtualizarStatus={carregarDados}
           />
           <ColunaFila
             titulo="🟢 Prontos"
             pedidos={fila.pronto}
-            cor="green"
+            borderClass="border-green-500"
+            textClass="text-green-700"
+            badgeClass="bg-green-100 text-green-700"
             onAtualizarStatus={carregarDados}
           />
           <ColunaFila
             titulo="🚴 Saiu Entrega"
             pedidos={fila.saiu_entrega}
-            cor="indigo"
+            borderClass="border-indigo-500"
+            textClass="text-indigo-700"
+            badgeClass="bg-indigo-100 text-indigo-700"
             onAtualizarStatus={carregarDados}
           />
           <ColunaFila
             titulo="🛵 Em Trânsito"
             pedidos={fila.em_transito}
-            cor="purple"
+            borderClass="border-purple-500"
+            textClass="text-purple-700"
+            badgeClass="bg-purple-100 text-purple-700"
             onAtualizarStatus={carregarDados}
           />
           <ColunaFila
             titulo="✅ Entregues"
             pedidos={fila.entregue}
-            cor="emerald"
+            borderClass="border-emerald-500"
+            textClass="text-emerald-700"
+            badgeClass="bg-emerald-100 text-emerald-700"
             onAtualizarStatus={carregarDados}
           />
         </div>
