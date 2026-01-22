@@ -128,7 +128,8 @@ export const pedidosService = {
   atualizar: (id, data) => api.put(`/pedidos/${id}`, data),
   atualizarStatus: (id, status) => api.patch(`/pedidos/${id}/status`, { status }),
   atribuirMotoboy: (id, motoboyId) => api.patch(`/pedidos/${id}/motoboy`, { motoboy_id: motoboyId }),
-  cancelar: (id, motivo) => api.delete(`/pedidos/${id}`, { data: { motivo } })
+  cancelar: (id, motivo) => api.delete(`/pedidos/${id}`, { data: { motivo } }),
+  deletar: (id) => api.delete(`/pedidos/${id}/deletar`)
 };
 
 // ==================== MOTOBOYS ====================

@@ -20,8 +20,8 @@ async function processarCategoria(sessao, opcao) {
   const categoriaSelecionada = categorias[index];
   sessao.dados.categoriaAtual = categoriaSelecionada;
 
-  // Se for pizzas, mostrar tamanhos primeiro
-  if (categoriaSelecionada.nome.toLowerCase() === 'pizzas') {
+  // Se for pizzas (qualquer categoria que contenha "pizza"), mostrar tamanhos primeiro
+  if (categoriaSelecionada.nome.toLowerCase().includes('pizza')) {
     return await mostrarTamanhos(sessao);
   }
 
@@ -68,7 +68,46 @@ async function processarTamanho(sessao, opcao) {
   sessao.dados.tamanhoSelecionado = tamanhos[index];
   sessao.dados.saboresSelecionados = [];
 
-  // Mostrar sabores de pizza
+  // Perguntar quantos sabores (se tamanho permite mais de 1)
+  const tamanho = tamanhos[index];
+  if (tamanho.max_sabores > 1) {
+    sessao.estado = 'ESCOLHER_QTD_SABORES';
+    let menu = `🍕 *Pizza ${tamanho.nome}* (${tamanho.fatias} fatias)\n\n`;
+    menu += `Quantos sabores você deseja?\n\n`;
+
+    for (let i = 1; i <= tamanho.max_sabores; i++) {
+      if (i === 1) {
+        menu += `*${i}* - 1 sabor (pizza inteira)\n`;
+      } else if (i === 2) {
+        menu += `*${i}* - 2 sabores (meio a meio)\n`;
+      } else {
+        menu += `*${i}* - ${i} sabores\n`;
+      }
+    }
+
+    menu += `\n*0* - Voltar aos tamanhos`;
+    return menu;
+  }
+
+  // Se só permite 1 sabor, ir direto para sabores
+  sessao.dados.qtdSaboresEscolhida = 1;
+  return await mostrarSabores(sessao);
+}
+
+// Processar escolha de quantidade de sabores
+async function processarQtdSabores(sessao, opcao) {
+  if (opcao === '0') {
+    return await mostrarTamanhos(sessao);
+  }
+
+  const tamanho = sessao.dados.tamanhoSelecionado;
+  const qtd = parseInt(opcao);
+
+  if (isNaN(qtd) || qtd < 1 || qtd > tamanho.max_sabores) {
+    return `❌ Opção inválida. Digite um número de 1 a ${tamanho.max_sabores}.`;
+  }
+
+  sessao.dados.qtdSaboresEscolhida = qtd;
   return await mostrarSabores(sessao);
 }
 
@@ -84,20 +123,26 @@ async function mostrarSabores(sessao) {
     sessao.estado = 'ESCOLHER_SABOR';
 
     const tamanho = sessao.dados.tamanhoSelecionado;
+    const qtdSabores = sessao.dados.qtdSaboresEscolhida || 1;
     const saboresEscolhidos = sessao.dados.saboresSelecionados.length;
 
     let menu = `🍕 *Sabores de Pizza* (${tamanho.nome})\n`;
-    menu += `Escolhendo sabor ${saboresEscolhidos + 1} de ${tamanho.max_sabores}\n\n`;
+    menu += `Escolhendo sabor ${saboresEscolhidos + 1} de ${qtdSabores}\n\n`;
 
+    // Agrupar pizzas por categoria/tipo
     pizzas.forEach((pizza, index) => {
-      // Buscar preço do tamanho selecionado
-      const preco = pizza.precos?.find(p => p.tamanho_id === tamanho.id);
-      const valorPreco = preco ? formatarDinheiro(preco.preco) : 'Sob consulta';
-      menu += `*${index + 1}* - ${pizza.nome} - ${valorPreco}\n`;
+      // Identificar se é premium (camarão, carne do sol, filé)
+      const nomeLower = pizza.nome.toLowerCase();
+      const isPremium = nomeLower.includes('camarão') ||
+                        nomeLower.includes('carne do sol') ||
+                        nomeLower.includes('filé');
+      const indicador = isPremium ? '🔴' : '🟢';
+      menu += `*${index + 1}* - ${indicador} ${pizza.nome}\n`;
     });
 
-    menu += `\n📋 _Os ingredientes de cada sabor estão no catálogo do perfil da pizzaria._`;
-    menu += `\n\n*0* - Voltar aos tamanhos`;
+    menu += `\n🟢 Tradicionais/Especiais | 🔴 Premium (+R$15)`;
+    menu += `\n\n📋 _Os ingredientes estão no catálogo do perfil._`;
+    menu += `\n\n*0* - Voltar`;
 
     return menu;
   } catch (error) {
@@ -109,6 +154,21 @@ async function mostrarSabores(sessao) {
 // Processar escolha de sabor
 async function processarSabor(sessao, opcao) {
   if (opcao === '0') {
+    // Voltar para escolher quantidade de sabores ou tamanhos
+    const tamanho = sessao.dados.tamanhoSelecionado;
+    if (tamanho.max_sabores > 1) {
+      sessao.dados.saboresSelecionados = [];
+      sessao.estado = 'ESCOLHER_QTD_SABORES';
+      let menu = `🍕 *Pizza ${tamanho.nome}* (${tamanho.fatias} fatias)\n\n`;
+      menu += `Quantos sabores você deseja?\n\n`;
+      for (let i = 1; i <= tamanho.max_sabores; i++) {
+        if (i === 1) menu += `*${i}* - 1 sabor (pizza inteira)\n`;
+        else if (i === 2) menu += `*${i}* - 2 sabores (meio a meio)\n`;
+        else menu += `*${i}* - ${i} sabores\n`;
+      }
+      menu += `\n*0* - Voltar aos tamanhos`;
+      return menu;
+    }
     return await mostrarTamanhos(sessao);
   }
 
@@ -122,24 +182,24 @@ async function processarSabor(sessao, opcao) {
   const pizzaSelecionada = pizzas[index];
   sessao.dados.saboresSelecionados.push(pizzaSelecionada);
 
-  const tamanho = sessao.dados.tamanhoSelecionado;
+  const qtdSabores = sessao.dados.qtdSaboresEscolhida || 1;
+  const saboresEscolhidos = sessao.dados.saboresSelecionados.length;
 
-  // Verificar se pode escolher mais sabores
-  if (sessao.dados.saboresSelecionados.length < tamanho.max_sabores) {
-    sessao.estado = 'ESCOLHER_SEGUNDO_SABOR';
-    return `✅ *${pizzaSelecionada.nome}* adicionada!
+  // Verificar se precisa escolher mais sabores
+  if (saboresEscolhidos < qtdSabores) {
+    // Ainda falta escolher mais sabores
+    return `✅ *${pizzaSelecionada.nome}* adicionado!
 
-Deseja adicionar mais um sabor?
+Sabor ${saboresEscolhidos} de ${qtdSabores} escolhido.
 
-*1* - Sim, adicionar outro sabor
-*2* - Não, continuar com ${sessao.dados.saboresSelecionados.length} sabor(es)`;
+` + await mostrarSabores(sessao);
   }
 
-  // Ir para bordas
+  // Todos os sabores escolhidos, ir para bordas
   return await mostrarBordas(sessao);
 }
 
-// Processar escolha de segundo sabor
+// Processar escolha de segundo sabor (mantido para compatibilidade)
 async function processarSegundoSabor(sessao, opcao) {
   if (opcao === '1') {
     return await mostrarSabores(sessao);
@@ -407,40 +467,20 @@ async function processarTipoEntrega(sessao, opcao) {
   if (opcao === '1') {
     sessao.dados.tipoEntrega = 'entrega';
 
-    // Buscar taxa pelo bairro do cliente
+    // Verificar se cliente tem endereço cadastrado
     const cliente = sessao.cliente;
-    let taxaEntrega = 0;
+    if (!cliente?.endereco || !cliente?.bairro) {
+      // Precisa coletar endereço
+      sessao.estado = 'COLETAR_ENDERECO';
+      return `📍 *Endereço de Entrega*
 
-    if (cliente?.bairro) {
-      try {
-        const taxa = await apiService.buscarTaxaPorBairro(cliente.bairro);
-        if (taxa) {
-          taxaEntrega = parseFloat(taxa.taxa);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar taxa:', error);
-      }
+Para entregar seu pedido, preciso do seu endereço completo.
+
+Digite seu *endereço* (Rua, número, complemento):`;
     }
 
-    sessao.dados.taxaEntrega = taxaEntrega;
-    sessao.dados.total = sessao.dados.subtotal + taxaEntrega;
-
-    sessao.estado = 'FORMA_PAGAMENTO';
-    return `📍 *Endereço de Entrega:*
-${cliente.endereco}
-${cliente.bairro}
-
-🛵 *Taxa de entrega:* ${formatarDinheiro(taxaEntrega)}
-💰 *Total:* ${formatarDinheiro(sessao.dados.total)}
-
-💳 *Forma de Pagamento:*
-
-*1* - 💵 Dinheiro
-*2* - 💳 Cartão de Crédito (na entrega)
-*3* - 💳 Cartão de Débito (na entrega)
-*4* - 📱 PIX
-
-Digite o número da opção:`;
+    // Cliente tem endereço, continuar
+    return await mostrarEnderecoEPagamento(sessao);
 
   } else if (opcao === '2') {
     sessao.dados.tipoEntrega = 'retirada';
@@ -465,6 +505,114 @@ Digite o número da opção:`;
   }
 
   return '❌ Digite *1* para entrega ou *2* para retirada.';
+}
+
+// Processar coleta de endereço durante pedido
+async function processarColetaEndereco(sessao, texto) {
+  if (texto.length < 5) {
+    return '❌ Por favor, digite um endereço válido com rua e número.';
+  }
+
+  sessao.dados.enderecoTemp = texto;
+  sessao.estado = 'COLETAR_BAIRRO';
+
+  // Buscar bairros disponíveis
+  try {
+    const taxas = await apiService.listarTaxas();
+    let listaBairros = '📍 *Bairros que atendemos:*\n\n';
+
+    taxas.forEach((taxa, index) => {
+      listaBairros += `*${index + 1}* - ${taxa.bairro} (Taxa: ${formatarDinheiro(taxa.taxa)})\n`;
+    });
+
+    sessao.dados.taxasDisponiveis = taxas;
+
+    return `${listaBairros}
+Digite o *número* do seu bairro:`;
+  } catch (error) {
+    return `Qual é o *bairro*?`;
+  }
+}
+
+// Processar coleta de bairro durante pedido
+async function processarColetaBairro(sessao, texto) {
+  const taxas = sessao.dados.taxasDisponiveis;
+  const opcao = parseInt(texto);
+
+  let bairroSelecionado = '';
+  let taxaEntrega = 0;
+
+  if (taxas && opcao >= 1 && opcao <= taxas.length) {
+    const taxaSelecionada = taxas[opcao - 1];
+    bairroSelecionado = taxaSelecionada.bairro;
+    taxaEntrega = parseFloat(taxaSelecionada.taxa);
+  } else if (texto.length >= 2) {
+    bairroSelecionado = texto;
+    taxaEntrega = 5; // Taxa padrão para bairros não cadastrados
+  } else {
+    return '❌ Por favor, digite o número do bairro ou o nome do bairro.';
+  }
+
+  // Atualizar cliente no banco
+  try {
+    const clienteAtualizado = await apiService.atualizarCliente(sessao.cliente.id, {
+      endereco: sessao.dados.enderecoTemp,
+      bairro: bairroSelecionado
+    });
+    sessao.cliente = clienteAtualizado;
+  } catch (error) {
+    console.error('Erro ao atualizar cliente:', error);
+    // Continuar mesmo com erro - usar dados locais
+    sessao.cliente.endereco = sessao.dados.enderecoTemp;
+    sessao.cliente.bairro = bairroSelecionado;
+  }
+
+  sessao.dados.taxaEntrega = taxaEntrega;
+  sessao.dados.total = sessao.dados.subtotal + taxaEntrega;
+
+  // Limpar dados temporários
+  delete sessao.dados.enderecoTemp;
+  delete sessao.dados.taxasDisponiveis;
+
+  return await mostrarEnderecoEPagamento(sessao);
+}
+
+// Mostrar endereço confirmado e formas de pagamento
+async function mostrarEnderecoEPagamento(sessao) {
+  const cliente = sessao.cliente;
+  let taxaEntrega = 0;
+
+  // Buscar taxa pelo bairro do cliente
+  if (cliente?.bairro) {
+    try {
+      const taxa = await apiService.buscarTaxaPorBairro(cliente.bairro);
+      if (taxa) {
+        taxaEntrega = parseFloat(taxa.taxa);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar taxa:', error);
+    }
+  }
+
+  sessao.dados.taxaEntrega = taxaEntrega;
+  sessao.dados.total = sessao.dados.subtotal + taxaEntrega;
+
+  sessao.estado = 'FORMA_PAGAMENTO';
+  return `📍 *Endereço de Entrega:*
+${cliente.endereco}
+${cliente.bairro}
+
+🛵 *Taxa de entrega:* ${formatarDinheiro(taxaEntrega)}
+💰 *Total:* ${formatarDinheiro(sessao.dados.total)}
+
+💳 *Forma de Pagamento:*
+
+*1* - 💵 Dinheiro
+*2* - 💳 Cartão de Crédito (na entrega)
+*3* - 💳 Cartão de Débito (na entrega)
+*4* - 📱 PIX
+
+Digite o número da opção:`;
 }
 
 // Processar forma de pagamento
@@ -706,6 +854,7 @@ Digite *1* para fazer um novo pedido.`;
 module.exports = {
   processarCategoria,
   processarTamanho,
+  processarQtdSabores,
   processarSabor,
   processarSegundoSabor,
   processarBorda,
@@ -714,6 +863,8 @@ module.exports = {
   processarCarrinho,
   processarRemoverItem,
   processarTipoEntrega,
+  processarColetaEndereco,
+  processarColetaBairro,
   processarFormaPagamento,
   processarTrocoValor,
   processarConfirmacaoPedido

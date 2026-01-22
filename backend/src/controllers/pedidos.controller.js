@@ -110,7 +110,7 @@ const pedidosController = {
     try {
       const pedidos = await Pedido.findAll({
         where: {
-          status: { [Op.in]: ['pendente', 'confirmado', 'preparando', 'pronto', 'saiu_entrega', 'em_transito'] }
+          status: { [Op.in]: ['pendente', 'confirmado', 'preparando', 'pronto', 'saiu_entrega', 'em_transito', 'entregue'] }
         },
         include: [
           { model: Cliente, as: 'cliente', attributes: ['id', 'nome', 'telefone'] },
@@ -135,7 +135,8 @@ const pedidosController = {
         preparando: pedidos.filter(p => p.status === 'preparando'),
         pronto: pedidos.filter(p => p.status === 'pronto'),
         saiu_entrega: pedidos.filter(p => p.status === 'saiu_entrega'),
-        em_transito: pedidos.filter(p => p.status === 'em_transito')
+        em_transito: pedidos.filter(p => p.status === 'em_transito'),
+        entregue: pedidos.filter(p => p.status === 'entregue')
       };
 
       return res.json(fila);
@@ -551,6 +552,36 @@ Em caso de dúvidas, entre em contato conosco.
     } catch (error) {
       console.error('Erro ao cancelar pedido:', error);
       return res.status(500).json({ error: 'Erro ao cancelar pedido' });
+    }
+  },
+
+  // DELETE /api/pedidos/:id/deletar (exclusão permanente - apenas admin)
+  async deletar(req, res) {
+    try {
+      const { id } = req.params;
+
+      const pedido = await Pedido.findByPk(id, {
+        include: [{ model: ItemPedido, as: 'itens' }]
+      });
+
+      if (!pedido) {
+        return res.status(404).json({ error: 'Pedido não encontrado' });
+      }
+
+      const dadosPedido = pedido.toJSON();
+
+      // Deletar itens do pedido primeiro (devido à foreign key)
+      await ItemPedido.destroy({ where: { pedido_id: id } });
+
+      // Deletar o pedido
+      await pedido.destroy();
+
+      await logAction(req, 'DELETAR', 'pedidos', id, dadosPedido, null);
+
+      return res.json({ message: 'Pedido excluído permanentemente' });
+    } catch (error) {
+      console.error('Erro ao deletar pedido:', error);
+      return res.status(500).json({ error: 'Erro ao deletar pedido' });
     }
   }
 };

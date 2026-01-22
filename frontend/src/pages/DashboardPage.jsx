@@ -49,7 +49,10 @@ function CardPedido({ pedido, onAtualizarStatus }) {
     pendente: { label: 'Pendente', cor: 'yellow', proximo: 'confirmado', labelProximo: 'Confirmar' },
     confirmado: { label: 'Confirmado', cor: 'blue', proximo: 'preparando', labelProximo: 'Preparar' },
     preparando: { label: 'Preparando', cor: 'orange', proximo: 'pronto', labelProximo: 'Pronto!' },
-    pronto: { label: 'Pronto', cor: 'green', proximo: 'saiu_entrega', labelProximo: 'Saiu Entrega' }
+    pronto: { label: 'Pronto', cor: 'green', proximo: 'saiu_entrega', labelProximo: 'Saiu Entrega' },
+    saiu_entrega: { label: 'Saiu Entrega', cor: 'indigo', proximo: 'em_transito', labelProximo: 'Em Trânsito' },
+    em_transito: { label: 'Em Trânsito', cor: 'purple', proximo: 'entregue', labelProximo: 'Entregue' },
+    entregue: { label: 'Entregue', cor: 'emerald', proximo: null, labelProximo: null }
   };
 
   const config = statusConfig[pedido.status];
@@ -179,7 +182,7 @@ function ColunaFila({ titulo, pedidos, cor, onAtualizarStatus }) {
 // Página Dashboard
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
-  const [fila, setFila] = useState({ pendente: [], confirmado: [], preparando: [], pronto: [] });
+  const [fila, setFila] = useState({ pendente: [], confirmado: [], preparando: [], pronto: [], saiu_entrega: [], em_transito: [], entregue: [] });
   const [loading, setLoading] = useState(true);
 
   const carregarDados = useCallback(async () => {
@@ -309,6 +312,24 @@ export default function DashboardPage() {
             titulo="🟢 Prontos"
             pedidos={fila.pronto}
             cor="green"
+            onAtualizarStatus={carregarDados}
+          />
+          <ColunaFila
+            titulo="🚴 Saiu Entrega"
+            pedidos={fila.saiu_entrega}
+            cor="indigo"
+            onAtualizarStatus={carregarDados}
+          />
+          <ColunaFila
+            titulo="🛵 Em Trânsito"
+            pedidos={fila.em_transito}
+            cor="purple"
+            onAtualizarStatus={carregarDados}
+          />
+          <ColunaFila
+            titulo="✅ Entregues"
+            pedidos={fila.entregue}
+            cor="emerald"
             onAtualizarStatus={carregarDados}
           />
         </div>

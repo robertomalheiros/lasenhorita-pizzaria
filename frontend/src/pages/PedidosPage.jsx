@@ -16,7 +16,8 @@ import {
   HiLocationMarker,
   HiCreditCard,
   HiTruck,
-  HiXCircle
+  HiXCircle,
+  HiTrash
 } from 'react-icons/hi';
 
 const statusOptions = [
@@ -102,10 +103,12 @@ function ModalDetalhesPedido({ pedido, onClose, onStatusAtualizado }) {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [loadingMotoboy, setLoadingMotoboy] = useState(false);
   const [loadingCancelar, setLoadingCancelar] = useState(false);
+  const [loadingDeletar, setLoadingDeletar] = useState(false);
   const [motoboys, setMotoboys] = useState([]);
   const [motoboyId, setMotoboyId] = useState(pedido.motoboy_id || '');
   const [motivoCancelamento, setMotivoCancelamento] = useState('');
   const [showCancelar, setShowCancelar] = useState(false);
+  const [showDeletar, setShowDeletar] = useState(false);
 
   const config = statusConfig[pedido.status] || {};
 
@@ -169,6 +172,20 @@ function ModalDetalhesPedido({ pedido, onClose, onStatusAtualizado }) {
       toast.error('Erro ao cancelar pedido');
     } finally {
       setLoadingCancelar(false);
+    }
+  };
+
+  const handleDeletar = async () => {
+    setLoadingDeletar(true);
+    try {
+      await pedidosService.deletar(pedido.id);
+      toast.success('Pedido excluído permanentemente');
+      onStatusAtualizado();
+      onClose();
+    } catch (error) {
+      toast.error('Erro ao excluir pedido');
+    } finally {
+      setLoadingDeletar(false);
     }
   };
 
@@ -387,6 +404,40 @@ function ModalDetalhesPedido({ pedido, onClose, onStatusAtualizado }) {
               )}
             </div>
           )}
+
+          {/* Botão Excluir Permanente (Admin) */}
+          <div className="pt-4 border-t border-gray-200">
+            {!showDeletar ? (
+              <button
+                onClick={() => setShowDeletar(true)}
+                className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              >
+                <HiTrash className="w-4 h-4 mr-2" />
+                Excluir Pedido (Admin)
+              </button>
+            ) : (
+              <div className="bg-gray-100 rounded-lg p-4">
+                <p className="text-sm text-gray-700 mb-3 font-medium">
+                  ⚠️ Esta ação é irreversível! O pedido será excluído permanentemente do sistema.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDeletar(false)}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    onClick={handleDeletar}
+                    disabled={loadingDeletar}
+                    className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 disabled:opacity-50"
+                  >
+                    {loadingDeletar ? 'Excluindo...' : 'Confirmar Exclusão'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

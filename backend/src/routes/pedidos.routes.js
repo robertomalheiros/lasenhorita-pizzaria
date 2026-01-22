@@ -19,5 +19,6 @@ router.put('/:id', pedidosController.atualizar);
 router.patch('/:id/status', pedidosController.atualizarStatus);
 router.patch('/:id/motoboy', pedidosController.atribuirMotoboy);
 router.delete('/:id', pedidosController.cancelar);
+router.delete('/:id/deletar', pedidosController.deletar);
 
 module.exports = router;

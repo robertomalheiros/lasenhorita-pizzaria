@@ -61,6 +61,33 @@ router.post('/clientes', async (req, res) => {
   }
 });
 
+// PUT /api/chatbot/clientes/:id
+router.put('/clientes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome, endereco, bairro, referencia } = req.body;
+
+    const cliente = await Cliente.findByPk(id);
+
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+
+    // Atualizar apenas campos fornecidos
+    if (nome) cliente.nome = nome;
+    if (endereco) cliente.endereco = endereco;
+    if (bairro) cliente.bairro = bairro;
+    if (referencia !== undefined) cliente.referencia = referencia;
+
+    await cliente.save();
+
+    return res.json(cliente);
+  } catch (error) {
+    console.error('Erro ao atualizar cliente:', error);
+    return res.status(500).json({ error: 'Erro ao atualizar cliente' });
+  }
+});
+
 // GET /api/chatbot/categorias
 router.get('/categorias', async (req, res) => {
   try {

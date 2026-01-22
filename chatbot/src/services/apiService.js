@@ -27,6 +27,11 @@ async function cadastrarCliente(dados) {
   return response.data;
 }
 
+async function atualizarCliente(clienteId, dados) {
+  const response = await api.put(`/clientes/${clienteId}`, dados);
+  return response.data;
+}
+
 // Categorias
 async function listarCategorias() {
   const response = await api.get('/categorias');
@@ -93,6 +98,7 @@ async function buscarPedido(pedidoId) {
 module.exports = {
   buscarClientePorTelefone,
   cadastrarCliente,
+  atualizarCliente,
   listarCategorias,
   listarProdutosPorCategoria,
   buscarProduto,

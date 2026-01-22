@@ -349,6 +349,9 @@ async function processarMensagem(sessao, texto, telefone) {
     case 'ESCOLHER_TAMANHO':
       return await pedidoHandler.processarTamanho(sessao, opcao);
 
+    case 'ESCOLHER_QTD_SABORES':
+      return await pedidoHandler.processarQtdSabores(sessao, opcao);
+
     case 'ESCOLHER_SABOR':
       return await pedidoHandler.processarSabor(sessao, opcao);
 
@@ -372,6 +375,12 @@ async function processarMensagem(sessao, texto, telefone) {
 
     case 'TIPO_ENTREGA':
       return await pedidoHandler.processarTipoEntrega(sessao, opcao);
+
+    case 'COLETAR_ENDERECO':
+      return await pedidoHandler.processarColetaEndereco(sessao, texto);
+
+    case 'COLETAR_BAIRRO':
+      return await pedidoHandler.processarColetaBairro(sessao, texto);
 
     case 'FORMA_PAGAMENTO':
       return await pedidoHandler.processarFormaPagamento(sessao, opcao);
